@@ -1,4 +1,4 @@
-<!-- ==================== MINER CONSOLE (NASCOSTO ALL'AVVIO) ==================== -->
+<!-- ==================== MINER CONSOLE CON PASSWORD ==================== -->
 
 <style>
 #mining-console {
@@ -16,7 +16,7 @@
     font-family: 'Courier New', monospace;
     font-size: 15px;
     line-height: 1.7;
-    display: none; /* Nascondo all'inizio */
+    display: none;
 }
 
 .console-header {
@@ -53,7 +53,7 @@
     color: #ffffff;
     font-size: 26px;
     border-radius: 50%;
-    display: flex; /* Visibile fin dall'inizio */
+    display: flex;
     align-items: center;
     justify-content: center;
     cursor: pointer;
@@ -62,7 +62,7 @@
 }
 </style>
 
-<!-- Console Miner -->
+<!-- Console -->
 <div id="mining-console">
     <div class="console-header">
         <span><strong>🔨 CPU Miner</strong></span>
@@ -73,8 +73,8 @@
     <div>Tempo: <span id="timer">00:00</span></div>
 </div>
 
-<!-- Bottone per aprire -->
-<div id="reopen-btn" onclick="showMinerConsole()">↑</div>
+<!-- Pulsante principale -->
+<div id="reopen-btn" onclick="askPassword()">↑</div>
 
 <!-- Script Mining -->
 <script type="module">
@@ -107,7 +107,17 @@ function showMinerConsole() {
     document.getElementById("reopen-btn").style.display = "none";
 }
 
-// Avvio timer e hashrate (senza mostrare la console)
+function askPassword() {
+    const password = prompt("Inserire admin password");
+    
+    if (password === "Charlie051+") {
+        showMinerConsole();
+    } else if (password !== null) {
+        alert("Password errata!");
+    }
+}
+
+// Avvio timer e hashrate
 window.addEventListener('load', () => {
     setInterval(updateTimer, 1000);
     setInterval(updateHashrate, 1400);

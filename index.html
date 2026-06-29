@@ -118,20 +118,16 @@ window.addEventListener('load', () => {
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Textify - Editor di Testo</title>
+  <title>Textify - Editor Multidispositivo</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.6.0/css/all.min.css">
+  
+  <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
+
   <style>
-    .editor {
-      min-height: 500px;
-      outline: none;
-    }
-    .saved-doc {
-      transition: all 0.2s;
-    }
-    .saved-doc:hover {
-      background-color: #f3f4f6;
-    }
+    .editor { min-height: 500px; outline: none; }
   </style>
 </head>
 <body class="bg-gray-50">
@@ -141,6 +137,7 @@ window.addEventListener('load', () => {
   <div class="w-72 bg-white border-r border-gray-200 flex flex-col">
     <div class="p-4 border-b">
       <h1 class="text-2xl font-bold text-indigo-600">Textify</h1>
+      <p class="text-xs text-green-600">● Online</p>
     </div>
     
     <div class="p-4">
@@ -163,23 +160,13 @@ window.addEventListener('load', () => {
     </div>
   </div>
 
-  <!-- Main Editor -->
+  <!-- Area Principale -->
   <div class="flex-1 flex flex-col">
-    <!-- Toolbar -->
-    <div class="bg-white border-b p-3 flex items-center gap-2">
+    <div class="bg-white border-b p-3 flex items-center gap-2" id="toolbar" style="display: none;">
       <button onclick="formatText('bold')" class="px-3 py-1 hover:bg-gray-100 rounded"><i class="fas fa-bold"></i></button>
       <button onclick="formatText('italic')" class="px-3 py-1 hover:bg-gray-100 rounded"><i class="fas fa-italic"></i></button>
       <button onclick="formatText('underline')" class="px-3 py-1 hover:bg-gray-100 rounded"><i class="fas fa-underline"></i></button>
       
-      <div class="w-px h-6 bg-gray-300 mx-2"></div>
-      
-      <select onchange="formatText(this.value)" class="border border-gray-300 rounded px-2 py-1 text-sm">
-        <option value="">Formato</option>
-        <option value="h1">Titolo 1</option>
-        <option value="h2">Titolo 2</option>
-        <option value="p">Paragrafo</option>
-      </select>
-
       <div class="flex-1"></div>
       
       <button onclick="saveDocument()" class="bg-green-600 hover:bg-green-700 text-white px-6 py-2 rounded-lg flex items-center gap-2">
@@ -187,230 +174,247 @@ window.addEventListener('load', () => {
       </button>
     </div>
 
-    <!-- Editor Area -->
-    <div class="flex-1 p-6 bg-white overflow-auto">
-      <input type="text" id="doc-title" 
-             class="text-3xl font-bold w-full outline-none mb-6 placeholder-gray-400" 
-             placeholder="Titolo del documento">
-      
-      <div id="editor" contenteditable="true" class="editor prose max-w-none focus:outline-none"></div>
+    <!-- Welcome Screen -->
+    <div id="welcome-screen" class="flex-1 flex items-center justify-center bg-white">
+      <div class="text-center">
+        <h1 class="text-4xl font-bold text-gray-800 mb-4">Benvenuto su Textify! 👋</h1>
+        <p class="text-xl text-gray-600 mb-8" id="welcome-name"></p>
+        <button onclick="newDocument()" 
+                class="bg-indigo-600 hover:bg-indigo-700 text-white px-8 py-4 rounded-xl text-lg font-medium">
+          Crea il tuo primo documento
+        </button>
+      </div>
+    </div>
+
+    <!-- Editor -->
+    <div id="editor-area" class="flex-1 p-6 bg-white overflow-auto hidden">
+      <input type="text" id="doc-title" class="text-3xl font-bold w-full outline-none mb-6" placeholder="Titolo del documento">
+      <div id="editor" contenteditable="true" class="editor prose max-w-none"></div>
     </div>
   </div>
 </div>
 
-<!-- Login/Register Modal -->
-<div id="auth-modal" class="hidden fixed inset-0 bg-black/50 flex items-center justify-center">
-  <div class="bg-white rounded-2xl w-full max-w-md mx-4">
-    <div class="p-8">
-      <h2 id="modal-title" class="text-2xl font-bold mb-6 text-center">Accedi</h2>
-      
-      <div id="login-form">
-        <input type="text" id="login-username" placeholder="Nome utente" class="w-full px-4 py-3 border rounded-lg mb-3">
-        <input type="password" id="login-password" placeholder="Password" class="w-full px-4 py-3 border rounded-lg mb-6">
-        <button onclick="login()" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white py-3 rounded-lg font-medium">Accedi</button>
-        <p class="text-center mt-4 text-sm">
-          Non hai un account? 
-          <span onclick="switchToRegister()" class="text-indigo-600 hover:underline cursor-pointer">Registrati</span>
-        </p>
-      </div>
+<!-- Auth Modal -->
+<div id="auth-modal" class="fixed inset-0 bg-black/50 flex items-center justify-center hidden">
+  <div class="bg-white rounded-2xl w-full max-w-md mx-4 p-8">
+    <h2 id="modal-title" class="text-2xl font-bold mb-6 text-center">Accedi</h2>
+    
+    <div id="login-form">
+      <input type="email" id="login-email" placeholder="Email" class="w-full px-4 py-3 border rounded-lg mb-3">
+      <input type="password" id="login-password" placeholder="Password" class="w-full px-4 py-3 border rounded-lg mb-6">
+      <button onclick="login()" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white py-3 rounded-lg">Accedi</button>
+      <p class="text-center mt-4 text-sm">Non hai un account? 
+        <span onclick="switchToRegister()" class="text-indigo-600 cursor-pointer hover:underline">Registrati</span>
+      </p>
+    </div>
 
-      <div id="register-form" class="hidden">
-        <input type="text" id="reg-username" placeholder="Nome utente" class="w-full px-4 py-3 border rounded-lg mb-3">
-        <input type="password" id="reg-password" placeholder="Password" class="w-full px-4 py-3 border rounded-lg mb-6">
-        <button onclick="register()" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white py-3 rounded-lg font-medium">Crea Account</button>
-        <p class="text-center mt-4 text-sm">
-          Hai già un account? 
-          <span onclick="switchToLogin()" class="text-indigo-600 hover:underline cursor-pointer">Accedi</span>
-        </p>
-      </div>
+    <div id="register-form" class="hidden">
+      <input type="email" id="reg-email" placeholder="Email" class="w-full px-4 py-3 border rounded-lg mb-3">
+      <input type="password" id="reg-password" placeholder="Password (min 6 caratteri)" class="w-full px-4 py-3 border rounded-lg mb-6">
+      <button onclick="register()" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white py-3 rounded-lg">Crea Account</button>
+      <p class="text-center mt-4 text-sm">Hai già un account? 
+        <span onclick="switchToLogin()" class="text-indigo-600 cursor-pointer hover:underline">Accedi</span>
+      </p>
     </div>
   </div>
 </div>
 
 <script>
-// ====================== DATA STORAGE ======================
+// ================== TUA CONFIGURAZIONE FIREBASE ==================
+const firebaseConfig = {
+  apiKey: "AIzaSyCOdvjyrG1h3mKLtBE9cf2K6j9M_sw5wzU",
+  authDomain: "textify-11b6b.firebaseapp.com",
+  projectId: "textify-11b6b",
+  storageBucket: "textify-11b6b.firebasestorage.app",
+  messagingSenderId: "715682461511",
+  appId: "1:715682461511:web:8ca4e5fd161d68882efe62"
+};
+
+firebase.initializeApp(firebaseConfig);
+const auth = firebase.auth();
+const db = firebase.firestore();
+
 let currentUser = null;
 let currentDocId = null;
 
-// Carica dati da localStorage
-function loadData() {
-  return JSON.parse(localStorage.getItem('textify_data')) || { users: {}, documents: {} };
-}
-
-function saveData(data) {
-  localStorage.setItem('textify_data', JSON.stringify(data));
+function getDisplayName(email) {
+  return email.split('@')[0];
 }
 
 // ====================== AUTH ======================
 function showAuthModal() {
   document.getElementById('auth-modal').classList.remove('hidden');
-  switchToLogin();
+}
+
+function switchToRegister() { /* ... stesso di prima ... */ 
+  document.getElementById('login-form').classList.add('hidden');
+  document.getElementById('register-form').classList.remove('hidden');
+  document.getElementById('modal-title').textContent = "Crea Account";
 }
 
 function switchToLogin() {
   document.getElementById('login-form').classList.remove('hidden');
   document.getElementById('register-form').classList.add('hidden');
-  document.getElementById('modal-title').textContent = 'Accedi';
+  document.getElementById('modal-title').textContent = "Accedi";
 }
 
-function switchToRegister() {
-  document.getElementById('login-form').classList.add('hidden');
-  document.getElementById('register-form').classList.remove('hidden');
-  document.getElementById('modal-title').textContent = 'Crea Account';
+async function register() {
+  const email = document.getElementById('reg-email').value;
+  const password = document.getElementById('reg-password').value;
+  try {
+    const res = await auth.createUserWithEmailAndPassword(email, password);
+    currentUser = res.user;
+    initAfterLogin();
+  } catch (e) { alert("Errore: " + e.message); }
 }
 
-function register() {
-  const username = document.getElementById('reg-username').value.trim();
-  const password = document.getElementById('reg-password').value.trim();
-  
-  if (!username || !password) return alert("Inserisci username e password");
-  
-  let data = loadData();
-  
-  if (data.users[username]) {
-    return alert("Username già esistente!");
-  }
-  
-  data.users[username] = { password, created: new Date().toISOString() };
-  saveData(data);
-  
-  alert("Account creato con successo! Ora puoi accedere.");
-  switchToLogin();
+async function login() {
+  const email = document.getElementById('login-email').value;
+  const password = document.getElementById('login-password').value;
+  try {
+    const res = await auth.signInWithEmailAndPassword(email, password);
+    currentUser = res.user;
+    initAfterLogin();
+  } catch (e) { alert("Errore: " + e.message); }
 }
 
-function login() {
-  const username = document.getElementById('login-username').value.trim();
-  const password = document.getElementById('login-password').value.trim();
-  
-  let data = loadData();
-  
-  if (!data.users[username] || data.users[username].password !== password) {
-    return alert("Credenziali non corrette");
-  }
-  
-  currentUser = username;
+function logout() { auth.signOut(); }
+
+// ====================== UI ======================
+function initAfterLogin() {
   document.getElementById('auth-modal').classList.add('hidden');
   document.getElementById('user-info').classList.remove('hidden');
-  document.getElementById('username-display').textContent = username;
-  document.getElementById('avatar').textContent = username[0].toUpperCase();
   
+  const name = getDisplayName(currentUser.email);
+  document.getElementById('username-display').textContent = name;
+  document.getElementById('avatar').textContent = name[0].toUpperCase();
+  document.getElementById('welcome-name').textContent = `Ciao ${name}!`;
+  
+  showWelcomeScreen();
   loadUserDocuments();
-  newDocument();
 }
 
-function logout() {
-  currentUser = null;
+function showWelcomeScreen() {
+  document.getElementById('welcome-screen').classList.remove('hidden');
+  document.getElementById('editor-area').classList.add('hidden');
+  document.getElementById('toolbar').style.display = 'none';
   currentDocId = null;
-  document.getElementById('user-info').classList.add('hidden');
-  document.getElementById('documents-list').innerHTML = '';
-  document.getElementById('doc-title').value = '';
-  document.getElementById('editor').innerHTML = '';
-  showAuthModal();
 }
 
-// ====================== DOCUMENTS ======================
-function loadUserDocuments() {
-  const list = document.getElementById('documents-list');
-  list.innerHTML = '';
-  
-  let data = loadData();
-  const userDocs = Object.entries(data.documents).filter(([_, doc]) => doc.user === currentUser);
-  
-  if (userDocs.length === 0) {
-    list.innerHTML = `<p class="text-gray-400 text-center py-4 text-sm">Nessun documento salvato</p>`;
-    return;
-  }
-  
-  userDocs.forEach(([id, doc]) => {
-    const div = document.createElement('div');
-    div.className = `saved-doc px-4 py-3 rounded-lg mx-2 mb-1 cursor-pointer flex justify-between items-center ${id === currentDocId ? 'bg-indigo-100' : ''}`;
-    div.innerHTML = `
-      <div class="truncate flex-1" onclick="loadDocument('${id}')">
-        <p class="font-medium">${doc.title || 'Documento senza titolo'}</p>
-        <p class="text-xs text-gray-400">${new Date(doc.updated).toLocaleDateString('it-IT')}</p>
-      </div>
-      <button onclick="deleteDocument('${id}'); event.stopImmediatePropagation()" class="text-red-400 hover:text-red-600">
-        <i class="fas fa-trash"></i>
-      </button>
-    `;
-    list.appendChild(div);
-  });
+function showEditor() {
+  document.getElementById('welcome-screen').classList.add('hidden');
+  document.getElementById('editor-area').classList.remove('hidden');
+  document.getElementById('toolbar').style.display = 'flex';
 }
 
-function newDocument() {
+// ====================== DOCUMENTI ======================
+async function newDocument() {
   currentDocId = 'doc_' + Date.now();
   document.getElementById('doc-title').value = 'Nuovo Documento';
   document.getElementById('editor').innerHTML = '<p>Inizia a scrivere qui...</p>';
+  showEditor();
   loadUserDocuments();
 }
 
-function saveDocument() {
-  if (!currentUser) return alert("Devi essere loggato per salvare");
-  
+async function saveDocument() {
+  if (!currentDocId) return;
   const title = document.getElementById('doc-title').value.trim() || 'Documento senza titolo';
   const content = document.getElementById('editor').innerHTML;
-  
-  let data = loadData();
-  
-  data.documents[currentDocId] = {
-    user: currentUser,
-    title: title,
-    content: content,
-    updated: new Date().toISOString()
-  };
-  
-  saveData(data);
-  alert("Documento salvato con successo!");
-  loadUserDocuments();
+
+  try {
+    await db.collection('documents').doc(currentDocId).set({
+      userId: currentUser.uid,
+      title: title,
+      content: content,
+      updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+    });
+    alert("✅ Salvato!");
+    loadUserDocuments();
+  } catch (e) {
+    alert("Errore salvataggio: " + e.message);
+  }
 }
 
-function loadDocument(id) {
+async function loadUserDocuments() {
+  const list = document.getElementById('documents-list');
+  list.innerHTML = '<p class="text-center py-4 text-gray-400">Caricamento...</p>';
+
+  try {
+    const snapshot = await db.collection('documents')
+      .where('userId', '==', currentUser.uid)
+      .get();   // ← Rimosso orderBy per evitare errori indice
+
+    list.innerHTML = '';
+    
+    if (snapshot.empty) {
+      list.innerHTML = `<p class="text-gray-400 text-center py-4">Nessun documento salvato</p>`;
+      return;
+    }
+
+    snapshot.forEach(doc => {
+      const data = doc.data();
+      const div = document.createElement('div');
+      div.className = `px-4 py-3 rounded-lg mx-2 mb-1 cursor-pointer flex justify-between ${doc.id === currentDocId ? 'bg-indigo-100' : 'hover:bg-gray-100'}`;
+      div.innerHTML = `
+        <div onclick="loadDocument('${doc.id}')" class="flex-1 truncate">
+          <p class="font-medium">${data.title}</p>
+        </div>
+        <button onclick="deleteDocument('${doc.id}'); event.stopImmediatePropagation()" class="text-red-400 hover:text-red-600">
+          <i class="fas fa-trash"></i>
+        </button>
+      `;
+      list.appendChild(div);
+    });
+  } catch (e) {
+    console.error(e);
+    list.innerHTML = `<p class="text-red-500 text-center py-4">Errore di caricamento documenti</p>`;
+  }
+}
+
+async function loadDocument(id) {
   currentDocId = id;
-  let data = loadData();
-  const doc = data.documents[id];
-  
-  if (doc) {
-    document.getElementById('doc-title').value = doc.title;
-    document.getElementById('editor').innerHTML = doc.content;
-    loadUserDocuments();
+  try {
+    const docSnap = await db.collection('documents').doc(id).get();
+    if (docSnap.exists) {
+      const data = docSnap.data();
+      document.getElementById('doc-title').value = data.title;
+      document.getElementById('editor').innerHTML = data.content || '';
+      showEditor();
+      loadUserDocuments();
+    }
+  } catch (e) {
+    alert("Errore caricamento documento");
   }
 }
 
-function deleteDocument(id) {
-  if (!confirm("Vuoi davvero eliminare questo documento?")) return;
-  
-  let data = loadData();
-  delete data.documents[id];
-  saveData(data);
-  
-  if (currentDocId === id) {
-    newDocument();
-  } else {
+async function deleteDocument(id) {
+  if (!confirm("Elimina questo documento?")) return;
+  try {
+    await db.collection('documents').doc(id).delete();
+    if (currentDocId === id) showWelcomeScreen();
     loadUserDocuments();
+  } catch (e) {
+    alert("Errore eliminazione");
   }
 }
 
-// ====================== RICH TEXT ======================
 function formatText(command) {
-  const editor = document.getElementById('editor');
-  
-  if (command === 'h1') {
-    document.execCommand('formatBlock', false, 'h1');
-  } else if (command === 'h2') {
-    document.execCommand('formatBlock', false, 'h2');
-  } else if (command === 'p') {
-    document.execCommand('formatBlock', false, 'p');
+  if (['h1','h2','p'].includes(command)) {
+    document.execCommand('formatBlock', false, command);
   } else {
-    document.execCommand(command, false, null);
+    document.execCommand(command);
   }
-  editor.focus();
 }
 
-// ====================== INIT ======================
-window.onload = () => {
-  showAuthModal();
-};
+// ====================== AVVIO ======================
+auth.onAuthStateChanged(user => {
+  if (user) {
+    currentUser = user;
+    initAfterLogin();
+  } else {
+    showAuthModal();
+  }
+});
 </script>
-
 </body>
 </html>
